@@ -1,0 +1,214 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パステルモグラたたき</title>
+    <style>
+        /* デザイン (CSS) */
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f8ff; /* パステルブルー */
+            color: #5a5a5a;
+            cursor: none; /* デフォルトのカーソルを非表示 */
+            user-select: none; /* 文字選択を防ぐ */
+        }
+
+        h1 {
+            color: #ffc0cb; /* パステルピンク */
+            text-shadow: 2px 2px 4px #ffffff;
+        }
+
+        .score-container {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .hole {
+            width: 100px;
+            height: 100px;
+            background-color: #c8e6c9; /* パステルグリーン */
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            border: 5px solid #a5d6a7;
+        }
+
+        .mole {
+            width: 70%;
+            height: 70%;
+            background-color: #8d6e63; /* モグラの色 */
+            border-radius: 50%;
+            position: absolute;
+            bottom: -100%;
+            left: 15%;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .hole.up .mole {
+            bottom: 10%;
+        }
+
+        #startButton {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 10px;
+            background-color: #ffc0cb; /* パステルピンク */
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #startButton:hover {
+            background-color: #f06292;
+        }
+
+        /* ハンマーのスタイル */
+        .hammer {
+            width: 50px;
+            height: 50px;
+            background-color: #ffd54f; /* 初期カラー: パステルイエロー */
+            border: 3px solid #fff;
+            border-radius: 10px 10px 25px 25px;
+            position: absolute;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            pointer-events: none; /* ハンマーがクリックイベントを邪魔しないように */
+            transition: all 0.2s ease-out;
+            z-index: 100; /* 最前面に表示 */
+        }
+
+        /* レベルアップ時のハンマー */
+        .hammer.level-1 {
+            width: 60px;
+            height: 60px;
+            background-color: #f48fb1; /* ピンク */
+        }
+
+        .hammer.level-2 {
+            width: 75px;
+            height: 75px;
+            background-color: #ce93d8; /* パステル紫色 */
+        }
+
+        /* クリック時のアニメーション */
+        .hammer.active {
+            transform: translate(-50%, -50%) rotate(-90deg);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>パステルモグラたたき</h1>
+    <div class="score-container">
+        <p>スコア: <span id="score">0</span></p>
+    </div>
+
+    <div class="game-board">
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+        <div class="hole"><div class="mole"></div></div>
+    </div>
+
+    <div class="hammer" id="hammer"></div>
+
+    <button id="startButton">ゲームスタート</button>
+
+    <script>
+        // ゲームの動き (JavaScript)
+        const scoreDisplay = document.getElementById('score');
+        const holes = document.querySelectorAll('.hole');
+        const moles = document.querySelectorAll('.mole');
+        const startButton = document.getElementById('startButton');
+        const hammer = document.getElementById('hammer');
+
+        let lastHole;
+        let timeUp = false;
+        let score = 0;
+
+        // マウスの動きに合わせてハンマーを動かす
+        window.addEventListener('mousemove', e => {
+            hammer.style.top = e.pageY + 'px';
+            hammer.style.left = e.pageX + 'px';
+        });
+
+        // クリック時のハンマーアニメーション
+        window.addEventListener('mousedown', () => {
+            hammer.classList.add('active');
+        });
+        window.addEventListener('mouseup', () => {
+            hammer.classList.remove('active');
+        });
+
+        function randomTime(min, max) {
+            return Math.round(Math.random() * (max - min) + min);
+        }
+
+        function randomHole(holes) {
+            const idx = Math.floor(Math.random() * holes.length);
+            const hole = holes[idx];
+            if (hole === lastHole) {
+                return randomHole(holes);
+            }
+            lastHole = hole;
+            return hole;
+        }
+
+        function peep() {
+            const time = randomTime(500, 1200);
+            const hole = randomHole(holes);
+            hole.classList.add('up');
+            setTimeout(() => {
+                hole.classList.remove('up');
+                if (!timeUp) peep();
+            }, time);
+        }
+
+        function startGame() {
+            score = 0;
+            scoreDisplay.textContent = score;
+            timeUp = false;
+            checkLevelUp(); // ハンマーを初期状態に戻す
+            peep();
+            startButton.style.display = 'none';
+        }
+
+        function bonk(e) {
+            if (!e.isTrusted) return;
+            score++;
+            this.parentNode.classList.remove('up');
+            scoreDisplay.textContent = score;
+            checkLevelUp();
+        }
+
+        function checkLevelUp() {
+            // クラスをリセットしてから適用
+            hammer.className = 'hammer';
+
+            if (score >= 30) {
+                hammer.classList.add('level-2');
+            } else if (score >= 10) {
+                hammer.classList.add('level-1');
+            }
+        }
+
+        moles.forEach(mole => mole.addEventListener('click', bonk));
+        startButton.addEventListener('click', startGame);
+    </script>
+</body>
+</html>
+
